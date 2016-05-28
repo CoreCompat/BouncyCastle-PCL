@@ -1,23 +1,16 @@
-configuration: Release
 install:  
-  - cmd: appveyor DownloadFile https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-  - cmd: nuget install gitlink -SolutionDir %APPVEYOR_BUILD_FOLDER% -Verbosity quiet -ExcludeVersion -pre
-  - cmd: nuget install GitVersion.CommandLine -SolutionDir %APPVEYOR_BUILD_FOLDER% -Verbosity quiet -ExcludeVersion -pre
-
-assembly_info:
-  patch: false
+  - cmd: appveyor DownloadFile https://download.microsoft.com/download/4/6/1/46116DFF-29F9-4FF8-94BF-F9BE05BE263B/packages/DotNetCore.1.0.0.RC2-SDK.Preview1-x64.exe
+  - cmd: DotNetCore.1.0.0.RC2-SDK.Preview1-x64.exe /install /quiet /log dotnetinstall.log
+  - ps: Push-AppveyorArtifact "dotnetinstall.log"
       
 before_build:
+  - cmd: cd CoreCompat.BouncyCastle
   
-  - cmd: nuget restore BouncyCastle-PCL.sln
-  - cmd: '.\packages\GitVersion.CommandLine\tools\GitVersion.exe /l console /output buildserver /updateAssemblyInfo'
-  
-build:
-  verbosity: normal
-  parallel: true
-  project: BouncyCastle-PCL.sln
+build_script:
+  - cmd: dotnet restore
+  - cmd: dotnet build -c Release --version-suffix r%APPVEYOR_BUILD_NUMBER%
+  - cmd: dotnet pack -c Release --version-suffix r%APPVEYOR_BUILD_NUMBER%
   
 after_build:
-  - cmd: '.\packages\gitlink\lib\net45\GitLink.exe . -f BouncyCastle-PCL.sln -u https://github.com/onovotny/BouncyCastle-PCL -s %APPVEYOR_REPO_COMMIT% -errorsaswarnings'  
-  - cmd: nuget pack Portable.BouncyCastle.nuspec -version "%GitVersion_NuGetVersion%" -prop "target=%CONFIGURATION%"
-  - ps: 'cmd /c "appveyor PushArtifact Portable.BouncyCastle.%GitVersion_NuGetVersion%.nupkg";if($lastexitcode -ne 0){$lastexitcode = 0}'
+  - ps: Push-AppveyorArtifact "bin\Release\CoreCompat.BouncyCastle.1.8.1-r$($env:APPVEYOR_BUILD_NUMBER).nupkg"
+  - ps: Push-AppveyorArtifact "bin\Release\CoreCompat.BouncyCastle.1.8.1-r$($env:APPVEYOR_BUILD_NUMBER).symbols.nupkg"
